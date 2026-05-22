@@ -1,16 +1,32 @@
-# React + Vite
+# Form App (React Native)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Esta aplicación es una demo de React Native que cumple con el enunciado:
 
-Currently, two official plugins are available:
+- Permite seleccionar el estilo de la app: **light / dark**.
+- Incluye un formulario cuya información se guarda en **AsyncStorage**.
+- Usa **React Native** exclusivamente.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Cómo ejecutar
 
-## React Compiler
+1. Instala dependencias:
+   ```bash
+   npm install
+   ```
+2. Inicia Expo:
+   ```bash
+   npm start
+   ```
+3. Abre la app desde Expo Dev Tools en un emulador o en un dispositivo físico.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Scripts útiles
 
-## Expanding the ESLint configuration
+- `npm start` — inicia Expo.
+- `npm run android` — ejecuta en Android.
+- `npm run ios` — ejecuta en iOS.
+- `npm run web` — inicia la app en modo web.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Qué hace la app
+
+- Cambia el estilo entre modo claro y modo oscuro.
+- Guarda la información del formulario en `AsyncStorage`.
+- Muestra los registros guardados en pantalla.
