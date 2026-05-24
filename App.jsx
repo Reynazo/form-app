@@ -65,6 +65,37 @@ function formatDate(iso) {
   })
 }
 
+function formatChileanPhone(input) {
+  let digits = input.replace(/\D/g, '')
+
+  // Si el usuario escribe o borra sobre el prefijo, evitamos tratar "56" como parte del número local.
+  if (digits.startsWith('56')) {
+    digits = digits.slice(2)
+  }
+
+  digits = digits.slice(0, 9)
+
+  if (digits.length === 0) {
+    return ''
+  }
+
+  const firstPart = digits.slice(0, 1)
+  const secondPart = digits.slice(1, 5)
+  const thirdPart = digits.slice(5, 9)
+
+  let formatted = `+56 ${firstPart}`
+
+  if (secondPart) {
+    formatted += ` ${secondPart}`
+  }
+
+  if (thirdPart) {
+    formatted += ` ${thirdPart}`
+  }
+
+  return formatted
+}
+
 export default function App() {
   const [mode, setMode] = useState('light')
   const [form, setForm] = useState(initialForm)
@@ -99,6 +130,14 @@ export default function App() {
   }
 
   const handleChange = (key, value) => {
+    if (key === 'telefono') {
+      setForm((prev) => ({
+        ...prev,
+        telefono: formatChileanPhone(value),
+      }))
+      return
+    }
+
     setForm((prev) => ({
       ...prev,
       [key]: value,
@@ -116,6 +155,12 @@ export default function App() {
       errs.email = 'Campo requerido'
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
       errs.email = 'Correo inválido'
+    }
+
+    if (!form.telefono.trim()) {
+      errs.telefono = 'Campo requerido'
+    } else if (!/^\+56 9 \d{4} \d{4}$/.test(form.telefono)) {
+      errs.telefono = 'Formato inválido. Usa +56 9 XXXX XXXX'
     }
 
     if (!form.categoria) {
@@ -233,8 +278,10 @@ export default function App() {
               placeholderTextColor={theme.textMuted}
               value={form.telefono}
               keyboardType="phone-pad"
+              maxLength={15}
               onChangeText={(value) => handleChange('telefono', value)}
             />
+            {errors.telefono && <Text style={styles.error}>{errors.telefono}</Text>}
           </View>
 
           <View style={styles.field}>
@@ -310,6 +357,7 @@ export default function App() {
               >
                 <Text style={[styles.recordName, { color: theme.text }]}>{item.nombre}</Text>
                 <Text style={[styles.recordText, { color: theme.textMuted }]}>{item.email}</Text>
+                <Text style={[styles.recordText, { color: theme.textMuted }]}>{item.telefono}</Text>
                 <Text style={[styles.recordText, { color: theme.textMuted }]}>{item.categoria}</Text>
                 <Text style={[styles.recordDate, { color: theme.textMuted }]}>{formatDate(item.createdAt)}</Text>
               </View>
@@ -448,3 +496,4 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 })
+
