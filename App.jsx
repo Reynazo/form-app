@@ -9,6 +9,7 @@ import {
   StyleSheet,
 } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import Button from './Button'
 
 const STORAGE_KEY = 'form_submissions'
 const THEME_KEY = 'app_theme'
@@ -172,33 +173,12 @@ export default function App() {
       >
         <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>          
           <Text style={[styles.title, { color: theme.text }]}>Formulario de Contacto</Text>
-
-          <View style={styles.themeRow}>
-            <Text style={[styles.label, { color: theme.text }]}>Estilo de la app</Text>
-            <Pressable
-              style={[
-                styles.toggleButton,
-                {
-                  backgroundColor:
-                    mode === 'light' ? theme.accentBg : theme.surfaceAlt,
-                },
-              ]}
-              onPress={() => setMode((prev) => (prev === 'light' ? 'dark' : 'light'))}
-            >
-              <Text
-                style={[
-                  styles.toggleText,
-                  {
-                    color:
-                      mode === 'light' ? theme.accentText : theme.accentText,
-                  },
-                ]}
-              >
-                {mode === 'light' ? 'Light' : 'Dark'}
-              </Text>
-            </Pressable>
-          </View>
-
+          <Button 
+            mode={mode} 
+            setMode={setMode} 
+            theme={theme} 
+            styles={styles} 
+          />
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.text }]}>Nombre completo</Text>
             <TextInput
