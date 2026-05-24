@@ -9,10 +9,10 @@ import {
   StyleSheet,
 } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-
+ 
 const STORAGE_KEY = 'form_submissions'
 const THEME_KEY = 'app_theme'
-
+ 
 const categories = [
   'Consulta general',
   'Soporte técnico',
@@ -20,15 +20,17 @@ const categories = [
   'Reclamo',
   'Otro',
 ]
-
+ 
 const initialForm = {
   nombre: '',
   email: '',
   telefono: '',
+  rut: '',
+  ciudad: '',
   categoria: '',
   mensaje: '',
 }
-
+ 
 const themes = {
   light: {
     bg: '#F8F7F4',
@@ -57,38 +59,65 @@ const themes = {
     error: '#F09595',
   },
 }
-
+ 
 function formatDate(iso) {
   return new Date(iso).toLocaleString('es-CL', {
     dateStyle: 'short',
     timeStyle: 'short',
   })
 }
-
+ 
+// Formatea RUT automáticamente: 12345678 → 12.345.678-9
+function formatRut(value) {
+  const clean = value.replace(/[^0-9kK]/g, '').toUpperCase()
+  if (clean.length < 2) return clean
+  const body = clean.slice(0, -1)
+  const dv = clean.slice(-1)
+  const formatted = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  return `${formatted}-${dv}`
+}
+ 
+// Valida RUT chileno con dígito verificador
+function validateRut(rut) {
+  const clean = rut.replace(/[^0-9kK]/g, '').toUpperCase()
+  if (clean.length < 8) return false
+  const body = clean.slice(0, -1)
+  const dv = clean.slice(-1)
+  let sum = 0
+  let multiplier = 2
+  for (let i = body.length - 1; i >= 0; i--) {
+    sum += parseInt(body[i]) * multiplier
+    multiplier = multiplier === 7 ? 2 : multiplier + 1
+  }
+  const remainder = 11 - (sum % 11)
+  const expected =
+    remainder === 11 ? '0' : remainder === 10 ? 'K' : String(remainder)
+  return dv === expected
+}
+ 
 export default function App() {
   const [mode, setMode] = useState('light')
   const [form, setForm] = useState(initialForm)
   const [errors, setErrors] = useState({})
   const [submissions, setSubmissions] = useState([])
   const [statusMessage, setStatusMessage] = useState('')
-
+ 
   const theme = themes[mode]
-
+ 
   useEffect(() => {
     loadStorage()
   }, [])
-
+ 
   useEffect(() => {
     AsyncStorage.setItem(THEME_KEY, mode).catch(() => {})
   }, [mode])
-
+ 
   const loadStorage = async () => {
     try {
       const savedTheme = await AsyncStorage.getItem(THEME_KEY)
       if (savedTheme === 'light' || savedTheme === 'dark') {
         setMode(savedTheme)
       }
-
       const savedData = await AsyncStorage.getItem(STORAGE_KEY)
       if (savedData) {
         setSubmissions(JSON.parse(savedData))
@@ -97,38 +126,44 @@ export default function App() {
       console.warn('Error loading storage:', error)
     }
   }
-
+ 
   const handleChange = (key, value) => {
-    setForm((prev) => ({
-      ...prev,
-      [key]: value,
-    }))
+    setForm((prev) => ({ ...prev, [key]: value }))
   }
-
+ 
+  const handleRutChange = (value) => {
+    const clean = value.replace(/[^0-9kK]/g, '')
+    if (clean.length <= 9) {
+      setForm((prev) => ({ ...prev, rut: formatRut(clean) }))
+    }
+  }
+ 
   const validate = () => {
     const errs = {}
-
-    if (!form.nombre.trim()) {
-      errs.nombre = 'Campo requerido'
-    }
-
+ 
+    if (!form.nombre.trim()) errs.nombre = 'Campo requerido'
+ 
     if (!form.email.trim()) {
       errs.email = 'Campo requerido'
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
       errs.email = 'Correo inválido'
     }
-
-    if (!form.categoria) {
-      errs.categoria = 'Selecciona una categoría'
+ 
+    if (!form.rut.trim()) {
+      errs.rut = 'Campo requerido'
+    } else if (!validateRut(form.rut)) {
+      errs.rut = 'RUT inválido'
     }
-
-    if (!form.mensaje.trim()) {
-      errs.mensaje = 'Campo requerido'
-    }
-
+ 
+    if (!form.ciudad.trim()) errs.ciudad = 'Campo requerido'
+ 
+    if (!form.categoria) errs.categoria = 'Selecciona una categoría'
+ 
+    if (!form.mensaje.trim()) errs.mensaje = 'Campo requerido'
+ 
     return errs
   }
-
+ 
   const saveSubmissions = async (items) => {
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(items))
@@ -136,69 +171,50 @@ export default function App() {
       console.warn('Error saving storage:', error)
     }
   }
-
+ 
   const handleSubmit = async () => {
     const errs = validate()
     setErrors(errs)
-
-    if (Object.keys(errs).length > 0) {
-      return
-    }
-
+    if (Object.keys(errs).length > 0) return
+ 
     const entry = {
       ...form,
       id: Date.now().toString(),
       createdAt: new Date().toISOString(),
     }
-
+ 
     const updated = [entry, ...submissions]
     setSubmissions(updated)
     await saveSubmissions(updated)
-
+ 
     setForm(initialForm)
     setErrors({})
     setStatusMessage('Formulario guardado correctamente')
-
-    setTimeout(() => {
-      setStatusMessage('')
-    }, 3000)
+    setTimeout(() => setStatusMessage(''), 3000)
   }
-
+ 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.bg }]}>      
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.bg }]}>
       <ScrollView
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>          
+        <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <Text style={[styles.title, { color: theme.text }]}>Formulario de Contacto</Text>
-
+ 
           <View style={styles.themeRow}>
             <Text style={[styles.label, { color: theme.text }]}>Estilo de la app</Text>
             <Pressable
-              style={[
-                styles.toggleButton,
-                {
-                  backgroundColor:
-                    mode === 'light' ? theme.accentBg : theme.surfaceAlt,
-                },
-              ]}
+              style={[styles.toggleButton, { backgroundColor: theme.surfaceAlt }]}
               onPress={() => setMode((prev) => (prev === 'light' ? 'dark' : 'light'))}
             >
-              <Text
-                style={[
-                  styles.toggleText,
-                  {
-                    color:
-                      mode === 'light' ? theme.accentText : theme.accentText,
-                  },
-                ]}
-              >
+              <Text style={[styles.toggleText, { color: theme.accentText }]}>
                 {mode === 'light' ? 'Light' : 'Dark'}
               </Text>
             </Pressable>
           </View>
-
+ 
+          {/* Nombre */}
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.text }]}>Nombre completo</Text>
             <TextInput
@@ -206,11 +222,12 @@ export default function App() {
               placeholder="Ej: María González"
               placeholderTextColor={theme.textMuted}
               value={form.nombre}
-              onChangeText={(value) => handleChange('nombre', value)}
+              onChangeText={(v) => handleChange('nombre', v)}
             />
             {errors.nombre && <Text style={styles.error}>{errors.nombre}</Text>}
           </View>
-
+ 
+          {/* Email */}
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.text }]}>Correo electrónico</Text>
             <TextInput
@@ -220,11 +237,12 @@ export default function App() {
               value={form.email}
               keyboardType="email-address"
               autoCapitalize="none"
-              onChangeText={(value) => handleChange('email', value)}
+              onChangeText={(v) => handleChange('email', v)}
             />
             {errors.email && <Text style={styles.error}>{errors.email}</Text>}
           </View>
-
+ 
+          {/* Teléfono */}
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.text }]}>Teléfono</Text>
             <TextInput
@@ -233,10 +251,39 @@ export default function App() {
               placeholderTextColor={theme.textMuted}
               value={form.telefono}
               keyboardType="phone-pad"
-              onChangeText={(value) => handleChange('telefono', value)}
+              onChangeText={(v) => handleChange('telefono', v)}
             />
           </View>
-
+ 
+          {/* RUT y Ciudad en fila */}
+          <View style={styles.row}>
+            <View style={[styles.field, styles.halfField]}>
+              <Text style={[styles.label, { color: theme.text }]}>RUT</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: theme.surfaceAlt, color: theme.text, borderColor: theme.border }]}
+                placeholder="12.345.678-9"
+                placeholderTextColor={theme.textMuted}
+                value={form.rut}
+                autoCapitalize="characters"
+                onChangeText={handleRutChange}
+              />
+              {errors.rut && <Text style={styles.error}>{errors.rut}</Text>}
+            </View>
+ 
+            <View style={[styles.field, styles.halfField]}>
+              <Text style={[styles.label, { color: theme.text }]}>Ciudad</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: theme.surfaceAlt, color: theme.text, borderColor: theme.border }]}
+                placeholder="Ej: Santiago"
+                placeholderTextColor={theme.textMuted}
+                value={form.ciudad}
+                onChangeText={(v) => handleChange('ciudad', v)}
+              />
+              {errors.ciudad && <Text style={styles.error}>{errors.ciudad}</Text>}
+            </View>
+          </View>
+ 
+          {/* Categoría */}
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.text }]}>Categoría</Text>
             <View style={styles.categoryContainer}>
@@ -246,18 +293,13 @@ export default function App() {
                   style={[
                     styles.categoryItem,
                     {
-                      backgroundColor:
-                        form.categoria === item ? theme.accent : theme.surfaceAlt,
+                      backgroundColor: form.categoria === item ? theme.accent : theme.surfaceAlt,
                       borderColor: theme.border,
                     },
                   ]}
                   onPress={() => handleChange('categoria', item)}
                 >
-                  <Text
-                    style={{
-                      color: form.categoria === item ? theme.accentText : theme.text,
-                    }}
-                  >
+                  <Text style={{ color: form.categoria === item ? theme.accentText : theme.text }}>
                     {item}
                   </Text>
                 </Pressable>
@@ -265,40 +307,38 @@ export default function App() {
             </View>
             {errors.categoria && <Text style={styles.error}>{errors.categoria}</Text>}
           </View>
-
+ 
+          {/* Mensaje */}
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.text }]}>Mensaje</Text>
             <TextInput
-              style={[
-                styles.input,
-                styles.textarea,
-                { backgroundColor: theme.surfaceAlt, color: theme.text, borderColor: theme.border },
-              ]}
+              style={[styles.input, styles.textarea, { backgroundColor: theme.surfaceAlt, color: theme.text, borderColor: theme.border }]}
               placeholder="Escribe tu mensaje aquí..."
               placeholderTextColor={theme.textMuted}
               value={form.mensaje}
               multiline
               numberOfLines={4}
-              onChangeText={(value) => handleChange('mensaje', value)}
+              onChangeText={(v) => handleChange('mensaje', v)}
             />
             {errors.mensaje && <Text style={styles.error}>{errors.mensaje}</Text>}
           </View>
-
+ 
           <Pressable
             style={[styles.submitButton, { backgroundColor: theme.accent }]}
             onPress={handleSubmit}
           >
             <Text style={[styles.submitButtonText, { color: theme.accentText }]}>Guardar formulario</Text>
           </Pressable>
-
+ 
           {statusMessage ? (
-            <View style={[styles.toast, { backgroundColor: theme.successBg }]}>              
+            <View style={[styles.toast, { backgroundColor: theme.successBg }]}>
               <Text style={[styles.toastText, { color: theme.success }]}>{statusMessage}</Text>
             </View>
           ) : null}
         </View>
-
-        <View style={styles.records}>          
+ 
+        {/* Registros */}
+        <View style={styles.records}>
           <Text style={[styles.subtitle, { color: theme.text }]}>Registros guardados</Text>
           {submissions.length === 0 ? (
             <Text style={[styles.emptyText, { color: theme.textMuted }]}>No hay registros aún.</Text>
@@ -310,6 +350,12 @@ export default function App() {
               >
                 <Text style={[styles.recordName, { color: theme.text }]}>{item.nombre}</Text>
                 <Text style={[styles.recordText, { color: theme.textMuted }]}>{item.email}</Text>
+                {item.rut ? (
+                  <Text style={[styles.recordText, { color: theme.textMuted }]}>RUT: {item.rut}</Text>
+                ) : null}
+                {item.ciudad ? (
+                  <Text style={[styles.recordText, { color: theme.textMuted }]}>📍 {item.ciudad}</Text>
+                ) : null}
                 <Text style={[styles.recordText, { color: theme.textMuted }]}>{item.categoria}</Text>
                 <Text style={[styles.recordDate, { color: theme.textMuted }]}>{formatDate(item.createdAt)}</Text>
               </View>
@@ -320,7 +366,7 @@ export default function App() {
     </SafeAreaView>
   )
 }
-
+ 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -367,6 +413,14 @@ const styles = StyleSheet.create({
   },
   field: {
     marginBottom: 16,
+  },
+  // Fila para RUT y Ciudad
+  row: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  halfField: {
+    flex: 1,
   },
   input: {
     borderWidth: 1,
