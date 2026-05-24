@@ -9,6 +9,7 @@ import {
   StyleSheet,
 } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import Button from './Button'
 
 const STORAGE_KEY = 'form_submissions'
 const THEME_KEY = 'app_theme'
@@ -93,6 +94,35 @@ function validateRut(rut) {
   const expected =
     remainder === 11 ? '0' : remainder === 10 ? 'K' : String(remainder)
   return dv === expected
+function formatChileanPhone(input) {
+  let digits = input.replace(/\D/g, '')
+
+  // Si el usuario escribe o borra sobre el prefijo, evitamos tratar "56" como parte del número local.
+  if (digits.startsWith('56')) {
+    digits = digits.slice(2)
+  }
+
+  digits = digits.slice(0, 9)
+
+  if (digits.length === 0) {
+    return ''
+  }
+
+  const firstPart = digits.slice(0, 1)
+  const secondPart = digits.slice(1, 5)
+  const thirdPart = digits.slice(5, 9)
+
+  let formatted = `+56 ${firstPart}`
+
+  if (secondPart) {
+    formatted += ` ${secondPart}`
+  }
+
+  if (thirdPart) {
+    formatted += ` ${thirdPart}`
+  }
+
+  return formatted
 }
 
 export default function App() {
@@ -136,6 +166,18 @@ export default function App() {
     if (clean.length <= 9) {
       setForm((prev) => ({ ...prev, rut: formatRut(clean) }))
     }
+    if (key === 'telefono') {
+      setForm((prev) => ({
+        ...prev,
+        telefono: formatChileanPhone(value),
+      }))
+      return
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      [key]: value,
+    }))
   }
 
   const validate = () => {
@@ -153,6 +195,14 @@ export default function App() {
       errs.rut = 'Campo requerido'
     } else if (!validateRut(form.rut)) {
       errs.rut = 'RUT inválido'
+    if (!form.telefono.trim()) {
+      errs.telefono = 'Campo requerido'
+    } else if (!/^\+56 9 \d{4} \d{4}$/.test(form.telefono)) {
+      errs.telefono = 'Formato inválido. Usa +56 9 XXXX XXXX'
+    }
+
+    if (!form.categoria) {
+      errs.categoria = 'Selecciona una categoría'
     }
 
     if (!form.ciudad.trim()) errs.ciudad = 'Campo requerido'
@@ -215,6 +265,12 @@ export default function App() {
           </View>
 
           {/* Nombre */}
+          <Button 
+            mode={mode} 
+            setMode={setMode} 
+            theme={theme} 
+            styles={styles} 
+          />
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.text }]}>Nombre completo</Text>
             <TextInput
@@ -251,8 +307,10 @@ export default function App() {
               placeholderTextColor={theme.textMuted}
               value={form.telefono}
               keyboardType="phone-pad"
-              onChangeText={(v) => handleChange('telefono', v)}
+              maxLength={15}
+              onChangeText={(value) => handleChange('telefono', value)}
             />
+            {errors.telefono && <Text style={styles.error}>{errors.telefono}</Text>}
           </View>
 
           {/* RUT y Ciudad en fila */}
@@ -356,6 +414,7 @@ export default function App() {
                 {item.ciudad ? (
                   <Text style={[styles.recordText, { color: theme.textMuted }]}>📍 {item.ciudad}</Text>
                 ) : null}
+                <Text style={[styles.recordText, { color: theme.textMuted }]}>{item.telefono}</Text>
                 <Text style={[styles.recordText, { color: theme.textMuted }]}>{item.categoria}</Text>
                 <Text style={[styles.recordDate, { color: theme.textMuted }]}>{formatDate(item.createdAt)}</Text>
               </View>
@@ -502,3 +561,4 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 })
+
