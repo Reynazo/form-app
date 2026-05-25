@@ -94,6 +94,8 @@ function validateRut(rut) {
   const expected =
     remainder === 11 ? '0' : remainder === 10 ? 'K' : String(remainder)
   return dv === expected
+}
+
 function formatChileanPhone(input) {
   let digits = input.replace(/\D/g, '')
 
@@ -195,6 +197,8 @@ export default function App() {
       errs.rut = 'Campo requerido'
     } else if (!validateRut(form.rut)) {
       errs.rut = 'RUT inválido'
+    }
+
     if (!form.telefono.trim()) {
       errs.telefono = 'Campo requerido'
     } else if (!/^\+56 9 \d{4} \d{4}$/.test(form.telefono)) {
