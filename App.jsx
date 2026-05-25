@@ -258,14 +258,6 @@ export default function App() {
 
           <View style={styles.themeRow}>
             <Text style={[styles.label, { color: theme.text }]}>Estilo de la app</Text>
-            <Pressable
-              style={[styles.toggleButton, { backgroundColor: theme.surfaceAlt }]}
-              onPress={() => setMode((prev) => (prev === 'light' ? 'dark' : 'light'))}
-            >
-              <Text style={[styles.toggleText, { color: theme.accentText }]}>
-                {mode === 'light' ? 'Light' : 'Dark'}
-              </Text>
-            </Pressable>
           </View>
 
           {/* Nombre */}
