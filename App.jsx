@@ -25,6 +25,8 @@ const initialForm = {
   nombre: '',
   email: '',
   telefono: '',
+  rut: '',
+  ciudad: '',
   categoria: '',
   mensaje: '',
 }
@@ -105,6 +107,58 @@ export default function App() {
     }))
   }
 
+  const normalizeRut = (value) => {
+    return value
+      .toUpperCase()
+      .replace(/[^0-9Kk]/g, '')
+      .replace(/^(.*)([0-9K])$/, '$1-$2')
+  }
+
+  const validateRut = (value) => {
+    const rut = value.replace(/[^0-9Kk]/g, '').toUpperCase()
+    if (!/^[0-9]+[0-9K]$/.test(rut)) {
+      return false
+    }
+
+    const body = rut.slice(0, -1)
+    const verifier = rut.slice(-1)
+    let sum = 0
+    let multiplier = 2
+
+    for (let i = body.length - 1; i >= 0; i -= 1) {
+      sum += Number(body[i]) * multiplier
+      multiplier = multiplier === 7 ? 2 : multiplier + 1
+    }
+
+    const remainder = 11 - (sum % 11)
+    let expected = remainder === 11 ? '0' : remainder === 10 ? 'K' : String(remainder)
+
+    return expected === verifier
+  }
+
+  const validatePhone = (value) => {
+    if (!value) return false
+    const digits = value.replace(/\D/g, '')
+
+    // Remove leading country code if present (56)
+    let rest = digits
+    if (digits.startsWith('56') && digits.length > 8) {
+      rest = digits.slice(2)
+    }
+
+    // Mobile: 9 digits starting with 9 (e.g. 9xxxxxxxx)
+    if (rest.length === 9) {
+      return /^9\d{8}$/.test(rest)
+    }
+
+    // Landline: 8 digits starting commonly with 2-7
+    if (rest.length === 8) {
+      return /^[2-7]\d{7}$/.test(rest)
+    }
+
+    return false
+  }
+
   const validate = () => {
     const errs = {}
 
@@ -116,6 +170,22 @@ export default function App() {
       errs.email = 'Campo requerido'
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
       errs.email = 'Correo inválido'
+    }
+
+    if (!form.telefono.trim()) {
+      errs.telefono = 'Campo requerido'
+    } else if (!validatePhone(form.telefono)) {
+      errs.telefono = 'Teléfono inválido. Ej: +56 9 1234 5678'
+    }
+
+    if (!form.rut.trim()) {
+      errs.rut = 'Campo requerido'
+    } else if (!validateRut(form.rut)) {
+      errs.rut = 'RUT inválido. Ej: 12.345.678-5'
+    }
+
+    if (!form.ciudad.trim()) {
+      errs.ciudad = 'Campo requerido'
     }
 
     if (!form.categoria) {
@@ -179,8 +249,9 @@ export default function App() {
               style={[
                 styles.toggleButton,
                 {
-                  backgroundColor:
-                    mode === 'light' ? theme.accentBg : theme.surfaceAlt,
+                  backgroundColor: theme.accent,
+                  borderColor: theme.border,
+                  borderWidth: 1,
                 },
               ]}
               onPress={() => setMode((prev) => (prev === 'light' ? 'dark' : 'light'))}
@@ -189,12 +260,11 @@ export default function App() {
                 style={[
                   styles.toggleText,
                   {
-                    color:
-                      mode === 'light' ? theme.accentText : theme.accentText,
+                    color: theme.accentText,
                   },
                 ]}
               >
-                {mode === 'light' ? 'Light' : 'Dark'}
+                {mode === 'light' ? 'Cambiar a oscuro' : 'Cambiar a claro'}
               </Text>
             </Pressable>
           </View>
@@ -235,6 +305,32 @@ export default function App() {
               keyboardType="phone-pad"
               onChangeText={(value) => handleChange('telefono', value)}
             />
+            {errors.telefono && <Text style={styles.error}>{errors.telefono}</Text>}
+          </View>
+
+          <View style={styles.field}>
+            <Text style={[styles.label, { color: theme.text }]}>RUT</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: theme.surfaceAlt, color: theme.text, borderColor: theme.border }]}
+              placeholder="12.345.678-5"
+              placeholderTextColor={theme.textMuted}
+              value={form.rut}
+              autoCapitalize="characters"
+              onChangeText={(value) => handleChange('rut', value)}
+            />
+            {errors.rut && <Text style={styles.error}>{errors.rut}</Text>}
+          </View>
+
+          <View style={styles.field}>
+            <Text style={[styles.label, { color: theme.text }]}>Ciudad</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: theme.surfaceAlt, color: theme.text, borderColor: theme.border }]}
+              placeholder="Santiago"
+              placeholderTextColor={theme.textMuted}
+              value={form.ciudad}
+              onChangeText={(value) => handleChange('ciudad', value)}
+            />
+            {errors.ciudad && <Text style={styles.error}>{errors.ciudad}</Text>}
           </View>
 
           <View style={styles.field}>
@@ -309,6 +405,8 @@ export default function App() {
                 style={[styles.recordCard, { backgroundColor: theme.surfaceAlt, borderColor: theme.border }]}
               >
                 <Text style={[styles.recordName, { color: theme.text }]}>{item.nombre}</Text>
+                <Text style={[styles.recordText, { color: theme.textMuted }]}>RUT: {item.rut}</Text>
+                <Text style={[styles.recordText, { color: theme.textMuted }]}>Ciudad: {item.ciudad}</Text>
                 <Text style={[styles.recordText, { color: theme.textMuted }]}>{item.email}</Text>
                 <Text style={[styles.recordText, { color: theme.textMuted }]}>{item.categoria}</Text>
                 <Text style={[styles.recordDate, { color: theme.textMuted }]}>{formatDate(item.createdAt)}</Text>
